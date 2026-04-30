@@ -4,10 +4,10 @@
 
 | Name | Type | Description |
 |------|------|-------------|
-| [parse_output](#parse_output) | Function | Decodes raw terminal output into structured solver results. |
-| [build_solver_panel](#build_solver_panel) | Function | Constructs a Rich Panel for graphical UI representation. |
-| [build_benchmark_table](#build_benchmark_table) | Function | Formats historical performance data into a table. |
-| [run_solvers](#run_solvers) | Function | Orchestrates sub-process execution of the `run_all.sh` script. |
+| [parseOutput](#parseOutput) | Function | Decodes raw terminal output into structured solver results. |
+| [buildSolverPanel](#buildSolverPanel) | Function | Constructs a Rich Panel for graphical UI representation. |
+| [buildBenchmarkTable](#buildBenchmarkTable) | Function | Formats historical performance data into a table. |
+| [runSolvers](#runSolvers) | Function | Orchestrates sub-process execution of the `run_all.sh` script. |
 | [main](#main) | Function | Application entry point and interactive loop control. |
 
 ## Overview
@@ -15,7 +15,7 @@ This file provides a terminal-based graphical interface (TUI) for the Countdown 
 
 ## Detailed Breakdown
 
-### run_solvers
+### runSolvers
 
 **Primary Library:** `subprocess`  
 **Purpose:** Triggers the synchronous execution of all language-specific solvers via a shell wrapper.
@@ -25,7 +25,7 @@ This function locates the `run_all.sh` orchestration script relative to its own 
 
 #### Signature
 ```python
-def run_solvers(target: int, numbers: list, console: Console) -> None
+def runSolvers(target: int, numbers: list, console: Console) -> None
 ```
 
 #### Parameters
@@ -61,7 +61,7 @@ def run_solvers(target: int, numbers: list, console: Console) -> None
 
 #### Source Code
 ```python
-def run_solvers(target: int, numbers: list, console: Console) -> None:
+def runSolvers(target: int, numbers: list, console: Console) -> None:
     script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "run_all.sh")
     args = [script_path, str(target)] + [str(n) for n in numbers]
     with console.status("[bold green]Running all 3 solvers... This might take a while.[/bold green]") as status:
@@ -70,11 +70,11 @@ def run_solvers(target: int, numbers: list, console: Console) -> None:
 
 ---
 
-### parse_output
+### parseOutput
 
 **Signature:**
 ```python
-def parse_output(text: str) -> dict
+def parseOutput(text: str) -> dict
 ```
 
 **Purpose:** Extracts structured "Expression" and "Value" fields from raw solver output strings.
@@ -91,7 +91,7 @@ def parse_output(text: str) -> dict
 
 **Source Code:**
 ```python
-def parse_output(text: str) -> dict:
+def parseOutput(text: str) -> dict:
     result = {
         "expression": "N/A",
         "value": "N/A",

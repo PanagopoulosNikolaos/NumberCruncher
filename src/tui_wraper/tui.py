@@ -33,7 +33,7 @@ EXAMPLES = [
 ]
 
 
-def read_file(path: str) -> str:
+def readFile(path: str) -> str:
     """
     Reads a file and returns its contents, or an empty string on error.
 
@@ -50,7 +50,7 @@ def read_file(path: str) -> str:
         return ""
 
 
-def parse_output(text: str) -> dict:
+def parseOutput(text: str) -> dict:
     """
     Parses solver output into structured result data.
 
@@ -79,7 +79,7 @@ def parse_output(text: str) -> dict:
     return result
 
 
-def build_solver_panel(name: str, output: dict, time_str: str, color: str) -> Panel:
+def buildSolverPanel(name: str, output: dict, time_str: str, color: str) -> Panel:
     """
     Constructs a Rich Panel for displaying a single solver's result.
 
@@ -114,7 +114,7 @@ def build_solver_panel(name: str, output: dict, time_str: str, color: str) -> Pa
     return Panel(content, title=f"[bold]{name}[/bold]", border_style=color)
 
 
-def build_benchmark_table(solver_data: list) -> Table:
+def buildBenchmarkTable(solver_data: list) -> Table:
     """
     Generates a comparison table summarizing execution data for all solvers.
 
@@ -163,7 +163,7 @@ def build_benchmark_table(solver_data: list) -> Table:
     return table
 
 
-def find_fastest(solver_data: list) -> str:
+def findFastest(solver_data: list) -> str:
     """
     Identifies the solver demonstrating the lowest execution time.
 
@@ -186,7 +186,7 @@ def find_fastest(solver_data: list) -> str:
     return "N/A"
 
 
-def run_solvers(target: int, numbers: list, console: Console) -> None:
+def runSolvers(target: int, numbers: list, console: Console) -> None:
     """
     Invokes the shell script to run all solvers simultaneously.
 
@@ -205,7 +205,7 @@ def run_solvers(target: int, numbers: list, console: Console) -> None:
         subprocess.run(args, capture_output=True, text=True)  
 
 
-def display_results(console: Console) -> None:
+def displayResults(console: Console) -> None:
     """
     Collects outputs from individual runner components and manages TUI drawing.
 
@@ -217,15 +217,15 @@ def display_results(console: Console) -> None:
     """
     solver_data = []
     for name, lang_hint, emoji, color in SOLVERS:
-        output_text = read_file(os.path.join(TEMP_DIR, f"{lang_hint}_output.txt"))
-        time_str = read_file(os.path.join(TEMP_DIR, f"{lang_hint}_time.txt"))
+        output_text = readFile(os.path.join(TEMP_DIR, f"{lang_hint}_output.txt"))
+        time_str = readFile(os.path.join(TEMP_DIR, f"{lang_hint}_time.txt"))
         time_str = time_str if time_str else "N/A"
 
-        output = parse_output(output_text)
+        output = parseOutput(output_text)
         solver_data.append((name, output, time_str, color))
 
     panels = [
-        build_solver_panel(name, output, time_str, color)
+        buildSolverPanel(name, output, time_str, color)
         for name, output, time_str, color in solver_data
     ]
 
@@ -237,10 +237,10 @@ def display_results(console: Console) -> None:
     console.print(columns)
     console.print()
 
-    console.print(build_benchmark_table(solver_data))
+    console.print(buildBenchmarkTable(solver_data))
     console.print()
 
-    fastest = find_fastest(solver_data)
+    fastest = findFastest(solver_data)
     console.print(
         f"[bold]Fastest Solver:[/bold] [green]{fastest}[/green] "
         if fastest != "N/A"
@@ -311,8 +311,8 @@ def main() -> None:
             target = EXAMPLES[idx]["target"]
             numbers = EXAMPLES[idx]["numbers"]
             
-        run_solvers(target, numbers, console)
-        display_results(console)
+        runSolvers(target, numbers, console)
+        displayResults(console)
         
         console.print()
         Prompt.ask("Press Enter to return to the menu")
