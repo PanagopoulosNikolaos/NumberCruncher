@@ -7,7 +7,7 @@ NumberCruncher is a comparative logic suite designed to solve the numeric portio
 ## Prerequisites & Installation
 
 ### Core Dependencies
-To run the full suite, you must install the compilers and interpreters for all three languages.
+To run the full suite, one must install the compilers and interpreters for all three languages.
 
 | Platform | Command |
 |----------|---------|
@@ -20,6 +20,10 @@ The TUI requires the `rich` library. Install it using the provided requirements 
 ```bash
 pip install -r requirements.txt
 ```
+#### If on Debian based systems 
+```bash
+sudo apt install python3-rich # much simpler
+```
 
 ## Running the Project
 The primary entry point is the interactive TUI. Run it from the project root:
@@ -27,7 +31,11 @@ The primary entry point is the interactive TUI. Run it from the project root:
 python src/tui_wraper/tui.py
 ```
 This will launch a menu to select difficulty levels or enter custom target numbers and values.
+---
+![TUI main](images/TUI_Selection_Page.png)
 
+![TUI output](images/TUI_Output_Page.png)
+---
 ## Documentation Index
 Detailed technical references for every component are available in the repository:
 - [Source Code Overview](src/README.md)
