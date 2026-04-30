@@ -122,3 +122,51 @@ valid_state(Pool, Target, Expr) :-
     combine(VA, VB, EA, EB, CombinedExpr, CombinedValue),
     valid_state([node(CombinedExpr, CombinedValue) | Rest], Target, Expr).
 ```
+
+---
+
+### main
+
+**Signature:**
+```prolog
+main(Target: int, Numbers: list) -> boolean
+```
+
+**Purpose:** Entry point for shell-based execution.
+
+**Parameters:**
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| Target | int | Yes | — | The target number to reach. |
+| Numbers | list | Yes | — | The available pool of numbers. |
+
+**Returns:**
+| Type | Description |
+|------|-------------|
+| boolean | Always succeeds, outputting result to standard out. |
+
+**Source Code:**
+```prolog
+main(Target, Numbers) :-
+    numbers_to_vals(Numbers, Pool),
+    (   valid_state(Pool, Target, Expr)
+    ->  format_expr(Expr, ExprStr),
+        evaluate(Expr, Value),
+        format('Expression: ~s~n', [ExprStr]),
+        format('Value: ~d~n', [Value])
+    ;   format('No solution could be generated.~n', [])
+    ).
+```
+
+**Implementation (Executable Logic Only):**
+* **Line 0:** `numbers_to_vals` — Transforms integer list into usable node/2 terms.
+* **Line 1:** `valid_state` — Calls the solver engine.
+* **Line 2:** `format_expr / evaluate` — Retrieves and formats the result.
+* **Line 3:** `format` — Prints the result or a failure message if no solution exists.
+
+**Dependencies:**
+| Symbol | Kind | Purpose | Source |
+|--------|------|---------|--------|
+| valid_state | Internal | Solver logic | countdown.pl |
+| format_expr | Internal | Result formatting | countdown.pl |
+| evaluate | Internal | Result confirmation | countdown.pl |

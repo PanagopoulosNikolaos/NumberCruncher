@@ -163,3 +163,54 @@ findInPairs target pool = firstJust $ do
     firstJust (Nothing:xs) = firstJust xs
     firstJust (Just x:_) = Just x
 ```
+
+---
+
+### main
+
+**Signature:**
+```haskell
+main :: IO ()
+```
+
+**Purpose:** CLI handler for Haskell binary execution.
+
+**Parameters:**
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| None | — | — | — | Reads directly from `System.Environment.getArgs`. |
+
+**Returns:**
+| Type | Description |
+|------|-------------|
+| IO () | Outputs results directly to standard output. |
+
+**Source Code:**
+```haskell
+main :: IO ()
+main = do
+    args <- getArgs
+    case args of
+        [] -> putStrLn "Usage: countdown <target> <n1> <n2> ... <nk>"
+        (t:ns) ->
+            let target = read t :: Int
+                nums   = map read ns :: [Int]
+            in case findSolution target nums of
+                Just expr -> do
+                    putStrLn $ "Expression: " ++ formatExpr expr
+                    putStrLn $ "Value: " ++ show (eval expr)
+                Nothing ->
+                    putStrLn "No solution could be generated."
+```
+
+**Implementation (Executable Logic Only):**
+* **Line 0:** `getArgs` — Fetches command-line arguments.
+* **Line 1:** `parsing` — Reads the target and numbers list.
+* **Line 2:** `findSolution call` — Initiates the search logic.
+* **Line 3:** `output` — Prints the formatted expression or failure message.
+
+**Dependencies:**
+| Symbol | Kind | Purpose | Source |
+|--------|------|---------|--------|
+| getArgs | External | CLI Argument access | System.Environment |
+| findSolution | Internal | Solver logic | countdown.hs |

@@ -36,6 +36,29 @@ This will launch a menu to select difficulty levels or enter custom target numbe
 
 ![TUI output](images/TUI_Output_Page.png)
 ---
+
+## Individual Execution (Examples)
+
+**Target:** `765` | **Numbers:** `1 3 7 10 25 50`
+
+### 1. Python
+```bash
+python3 src/python/countdown.py 765 1 3 7 10 25 50
+```
+
+### 2. Haskell
+```bash
+cd src/haskell
+ghc -O2 -o countdown countdown.hs
+./countdown 765 1 3 7 10 25 50
+```
+
+### 3. Prolog
+```bash
+swipl -s src/prolog/countdown.pl -g "main(765, [1, 3, 7, 10, 25, 50]), halt."
+```
+
+---
 ## Documentation Index
 Detailed technical references for every component are available in the repository:
 - [Source Code Overview](src/README.md)
