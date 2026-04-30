@@ -26,9 +26,15 @@ sudo apt install python3-rich # much simpler
 ```
 
 ## Running the Project
-The primary entry point is the interactive TUI. Run it from the project root:
+The primary entry point is the interactive TUI.
 ```bash
-python src/tui_wraper/tui.py
+python3 src/tui_wraper/tui.py
+```
+
+### Quick Execution (Installable Command)
+```bash
+pip install -e .
+crunch
 ```
 This will launch a menu to select difficulty levels or enter custom target numbers and values.
 ---

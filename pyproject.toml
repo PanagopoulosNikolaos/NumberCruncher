@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools >= 61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "numbercruncher"
+version = "0.1.0"
+description = "Countdown Numbers Game solvers in Python, Haskell, Prolog with Rich TUI interface"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [{name = "Panagopoulos Nikolaos"}]
+requires-python = ">=3.8"
+dependencies = [
+    "rich",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.scripts]
+crunch = "tui_wraper.tui:main"
+
+[project.urls]
+Homepage = "https://github.com/PanagopoulosNikolaos/NumberCruncher"
+Repository = "https://github.com/PanagopoulosNikolaos/NumberCruncher.git"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false
