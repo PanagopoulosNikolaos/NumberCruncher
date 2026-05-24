@@ -43,6 +43,15 @@ This will launch a menu to select difficulty levels or enter custom target numbe
 ![TUI output](images/TUI_Output_Page.png)
 ---
 
+## Running the Tests
+To run the full suite of unit and integration tests:
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+
+
+
 ## Individual Execution (Examples)
 
 **Target:** `765` | **Numbers:** `1 3 7 10 25 50`
@@ -68,10 +77,15 @@ swipl -s src/prolog/countdown.pl -g "main(765, [1, 3, 7, 10, 25, 50]), halt."
 ## Documentation Index
 Detailed technical references for every component are available in the repository:
 - [Source Code Overview](src/README.md)
+- [Automated Tests Overview](tests/README.md)
 - [Python Solver Reference](docs/src_docs/countdown_py_doc.md)
 - [Haskell Solver Reference](docs/src_docs/countdown_hs_doc.md)
 - [Prolog Solver Reference](docs/src_docs/countdown_pl_doc.md)
 - [TUI & Execution Orchestration Reference](docs/src_docs/tui_py_doc.md)
+- [Python Solver Test Reference](docs/tests_docs/test_python_solver_doc.md)
+- [Haskell Solver Test Reference](docs/tests_docs/test_haskell_solver_doc.md)
+- [Prolog Solver Test Reference](docs/tests_docs/test_prolog_solver_doc.md)
+- [Orchestration Test Reference](docs/tests_docs/test_orchestration_doc.md)
 
 ## Project Structure
 - `src/python/`: Recursive search implementation in Python.
