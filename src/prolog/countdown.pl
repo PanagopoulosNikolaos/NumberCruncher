@@ -3,117 +3,49 @@
 
 :- use_module(library(lists)).
 
-% === Expression Evaluation ===
+% combine(EA, VA, EB, VB, CombinedExpr, CombinedValue) generates a valid operation result.
+combine(EA, VA, EB, VB, add(EA, EB), V) :- VA =< VB, V is VA + VB.
+combine(EA, VA, EB, VB, sub(EA, EB), V) :- VA > VB, V is VA - VB.
+combine(EA, VA, EB, VB, mul(EA, EB), V) :- VA =< VB, V is VA * VB, V > 1.
+combine(EA, VA, EB, VB, div(EA, EB), V) :- VB > 1, 0 is VA mod VB, V is VA // VB.
 
-% evaluate(Expr, Value) succeeds when Expr evaluates to Value.
-evaluate(val(V), V).
-evaluate(add(L, R), V) :-
-    evaluate(L, VL),
-    evaluate(R, VR),
-    V is VL + VR.
-evaluate(sub(L, R), V) :-
-    evaluate(L, VL),
-    evaluate(R, VR),
-    VL > VR,
-    V is VL - VR.
-evaluate(mul(L, R), V) :-
-    evaluate(L, VL),
-    evaluate(R, VR),
-    V is VL * VR.
-evaluate(div(L, R), V) :-
-    evaluate(L, VL),
-    evaluate(R, VR),
-    VR =\= 0,
-    VL mod VR =:= 0,
-    V is VL // VR.
+% solve(Pool, Target, Expr) succeeds when an expression evaluating to Target is found.
+solve(Pool, Target, Expr) :-
+    member(node(Expr, Target), Pool).
+solve(Pool, Target, Expr) :-
+    select(node(EA, VA), Pool, P1),
+    select(node(EB, VB), P1, Rest),
+    combine(EA, VA, EB, VB, NewExpr, NewVal),
+    solve([node(NewExpr, NewVal) | Rest], Target, Expr).
 
-% === Expression Formatting ===
+% fmt(Expr, FormattedString) formats an expression tree into a human-readable string.
+fmt(val(V), S) :- !, number_string(V, S).
+fmt(Expr, S) :-
+    Expr =.. [Op, L, R],
+    op_char(Op, C),
+    fmt(L, LS),
+    fmt(R, RS),
+    atomic_list_concat(['(', LS, ' ', C, ' ', RS, ')'], S).
 
-format_expr(val(V), Expr) :-
-    number_string(V, Expr).
-format_expr(add(L, R), Expr) :-
-    format_expr(L, LS),
-    format_expr(R, RS),
-    string_concat("(", LS, T1),
-    string_concat(T1, " + ", T2),
-    string_concat(T2, RS, T3),
-    string_concat(T3, ")", Expr).
-format_expr(sub(L, R), Expr) :-
-    format_expr(L, LS),
-    format_expr(R, RS),
-    string_concat("(", LS, T1),
-    string_concat(T1, " - ", T2),
-    string_concat(T2, RS, T3),
-    string_concat(T3, ")", Expr).
-format_expr(mul(L, R), Expr) :-
-    format_expr(L, LS),
-    format_expr(R, RS),
-    string_concat("(", LS, T1),
-    string_concat(T1, " * ", T2),
-    string_concat(T2, RS, T3),
-    string_concat(T3, ")", Expr).
-format_expr(div(L, R), Expr) :-
-    format_expr(L, LS),
-    format_expr(R, RS),
-    string_concat("(", LS, T1),
-    string_concat(T1, " / ", T2),
-    string_concat(T2, RS, T3),
-    string_concat(T3, ")", Expr).
+op_char(add, +).
+op_char(sub, -).
+op_char(mul, *).
+op_char(div, /).
 
-% === Core Solver ===
+% Helper to convert a number to a node.
+num_to_node(N, node(val(N), N)).
 
-% valid_state(Pool, Target, Expr) finds an expression evaluating to Target.
-% Pool is a list of node(Expr, Value) terms.
-valid_state(Pool, Target, Expr) :-
-    member(node(Candidate, Value), Pool),
-    Value =:= Target,
-    Expr = Candidate.
-valid_state(Pool, Target, Expr) :-
-    length(Pool, Len),
-    Len >= 2,
-    select(node(EA, VA), Pool, Pool1),
-    select(node(EB, VB), Pool1, Rest),
-    combine(VA, VB, EA, EB, CombinedExpr, CombinedValue),
-    valid_state([node(CombinedExpr, CombinedValue) | Rest], Target, Expr).
-
-% combine(VA, VB, EA, EB, ResultExpr, ResultValue) generates a valid operation result.
-combine(VA, VB, EA, EB, add(EA, EB), V) :-
-    VA =< VB, % Symmetry breaking
-    V is VA + VB,
-    V > 0.
-combine(VA, VB, EA, EB, sub(EA, EB), V) :-
-    VA > VB,
-    V is VA - VB.
-combine(VA, VB, EA, EB, mul(EA, EB), V) :-
-    VA =< VB, % Symmetry breaking
-    V is VA * VB,
-    V > 0.
-combine(VA, VB, EA, EB, div(EA, EB), V) :-
-    VB =\= 0,
-    VA mod VB =:= 0,
-    V is VA // VB,
-    V > 0.
-
-% === Main Predicate ===
-
-% Convert a list of numbers to a list of node/2 terms.
-numbers_to_vals([], []).
-numbers_to_vals([N|Ns], [node(val(N), N)|Vt]) :-
-    numbers_to_vals(Ns, Vt).
-
-% main(Target, Numbers) solves and prints the result.
+% main(Target, Numbers) is called by run_all.sh to solve and display the result.
 main(Target, Numbers) :-
-    numbers_to_vals(Numbers, Pool),
-    (   valid_state(Pool, Target, Expr)
-    ->  format_expr(Expr, ExprStr),
-        evaluate(Expr, Value),
-        format('Expression: ~s~n', [ExprStr]),
-        format('Value: ~d~n', [Value])
-    ;   format('No solution could be generated.~n', [])
-    ).
+    run([Target | Numbers]).
 
-% === Entry Point for swipl -g ===
-% Usage: swipl -s countdown.pl -g "run([765,1,3,7,10,25,50])" -g "halt."
+% run(Args) is the entry point for the SWI-Prolog interpreter.
 run(Args) :-
     Args = [Target | Numbers],
-    main(Target, Numbers).
+    maplist(num_to_node, Numbers, Pool),
+    (   solve(Pool, Target, Expr)
+    ->  fmt(Expr, S),
+        format('Expression: ~s~n', [S]),
+        format('Value: ~d~n', [Target])
+    ;   format('No solution could be generated.~n', [])
+    ).

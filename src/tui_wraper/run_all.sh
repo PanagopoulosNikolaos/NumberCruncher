@@ -34,7 +34,7 @@ PROLOG_LIST="[$(echo "$NUMBERS" | sed 's/ /,/g')]"
     echo "$ELAPSED" > "$TEMP_DIR/python_time.txt"
 ) &
 
-# Compile Haskell if needed
+# Compiles Haskell if needed
 HS_BIN="$PROJECT_ROOT/src/haskell/countdown"
 if [ ! -f "$HS_BIN" ] || [ "$PROJECT_ROOT/src/haskell/countdown.hs" -nt "$HS_BIN" ]; then
     ghc -o "$HS_BIN" "$PROJECT_ROOT/src/haskell/countdown.hs" -O2 2>/dev/null
