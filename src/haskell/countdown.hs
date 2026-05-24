@@ -1,95 +1,59 @@
--- Countdown numbers game solver in Haskell.
--- Uses a tree-based recursive search to find valid arithmetic expressions.
-
 import System.Environment (getArgs)
+import Data.Maybe (listToMaybe, mapMaybe)
+
+-- | Operation type representing addition, subtraction, multiplication, and division.
+data Op = Add | Sub | Mul | Div deriving (Show)
 
 -- | Expression tree representing a computation.
-data Expr
-    = Val Int
-    | Add Expr Expr
-    | Sub Expr Expr
-    | Mul Expr Expr
-    | Div Expr Expr
-    deriving (Show)
+data Expr = Val Int | App Op Expr Expr deriving (Show)
 
 -- | Evaluate an expression to its integer result.
 eval :: Expr -> Int
-eval (Val n)    = n
-eval (Add l r)  = eval l + eval r
-eval (Sub l r)  = eval l - eval r
-eval (Mul l r)  = eval l * eval r
-eval (Div l r)  = eval l `div` eval r
+eval (Val n) = n
+eval (App Add l r) = eval l + eval r
+eval (App Sub l r) = eval l - eval r
+eval (App Mul l r) = eval l * eval r
+eval (App Div l r) = eval l `div` eval r
 
--- | Format expression as a readable string.
+-- | Format expression as a readable string with parentheses.
 formatExpr :: Expr -> String
-formatExpr = go True
-  where
-    go :: Bool -> Expr -> String
-    go _ (Val n) = show n
-    go outer (Add l r) = wrap outer (go False l ++ " + " ++ go False r)
-    go outer (Sub l r) = wrap outer (go False l ++ " - " ++ go False r)
-    go outer (Mul l r) = wrap outer (go False l ++ " * " ++ go False r)
-    go outer (Div l r) = wrap outer (go False l ++ " / " ++ go False r)
-    wrap False s = "(" ++ s ++ ")"
-    wrap _   s   = s
-
--- | Remove element at a given index from a list.
-removeAt :: [a] -> Int -> [a]
-removeAt xs i = take i xs ++ drop (i + 1) xs
+formatExpr (Val n) = show n
+formatExpr (App op l r) = "(" ++ formatExpr l ++ " " ++ sym op ++ " " ++ formatExpr r ++ ")"
+  where sym Add = "+"; sym Sub = "-"; sym Mul = "*"; sym Div = "/"
 
 -- | Generate all valid operation results from two (value, expr) pairs.
 candidates :: (Int, Expr) -> (Int, Expr) -> [(Int, Expr)]
-candidates (v1, e1) (v2, e2) =
-    [ (v1 + v2, Add e1 e2)
-    , (v1 * v2, Mul e1 e2)
-    ]
-    ++ [ (v1 - v2, Sub e1 e2) | v1 > v2 ]
-    ++ [ (v2 - v1, Sub e2 e1) | v2 > v1 ]
-    ++ [ (v1 `div` v2, Div e1 e2) | v2 /= 0, v1 `mod` v2 == 0 ]
-    ++ [ (v2 `div` v1, Div e2 e1) | v1 /= 0, v2 `mod` v1 == 0 ]
+candidates (x, l) (y, r) = 
+  [(x + y, App Add l r), (x * y, App Mul l r)] ++
+  [(x - y, App Sub l r) | x > y] ++
+  [(y - x, App Sub r l) | y > x] ++
+  [(x `div` y, App Div l r) | y /= 0, x `mod` y == 0] ++
+  [(y `div` x, App Div r l) | x /= 0, y `mod` x == 0]
+
+-- | Select all pairs of elements from a list, returning them and the remaining elements.
+select2 :: [a] -> [(a, a, [a])]
+select2 [] = []
+select2 (x:xs) = [(x, y, ys) | (y, ys) <- select1 xs] ++ [(y, z, x:ys) | (y, z, ys) <- select2 xs]
+
+-- | Select one element from a list, returning it and the remaining elements.
+select1 :: [a] -> [(a, [a])]
+select1 [] = []
+select1 (x:xs) = (x, xs) : [(y, x:ys) | (y, ys) <- select1 xs]
 
 -- | Recursive solver that tries all pair combinations to reach the target.
 solve :: Int -> [(Int, Expr)] -> Maybe Expr
-solve target pool =
-    -- Check if any value directly matches target
-    case [ e | (v, e) <- pool, v == target ] of
-        (e:_) -> Just e
-        [] ->
-            if length pool < 2
-                then Nothing
-                else findInPairs target pool
-
--- | Try all pairs in pool, combine them, and recurse.
-findInPairs :: Int -> [(Int, Expr)] -> Maybe Expr
-findInPairs target pool = firstJust $ do
-    i <- [0 .. length pool - 1]
-    j <- [i + 1 .. length pool - 1]
-    let (v1, e1) = pool !! i
-        (v2, e2) = pool !! j
-        rest = removeAt (removeAt pool i) $ if j > i then j - 1 else j
-    (v, e) <- candidates (v1, e1) (v2, e2)
-    return $ solve target ((v, e) : rest)
-  where
-    firstJust [] = Nothing
-    firstJust (Nothing:xs) = firstJust xs
-    firstJust (Just x:_) = Just x
-
--- | Entry point: create initial pool and search.
-findSolution :: Int -> [Int] -> Maybe Expr
-findSolution target nums = solve target [(n, Val n) | n <- nums]
+solve target pool 
+  | not (null hits) = Just (head hits)
+  | otherwise = listToMaybe $ mapMaybe (solve target) 
+      [ (v, e) : rest | (a, b, rest) <- select2 pool, (v, e) <- candidates a b ]
+  where hits = [e | (v, e) <- pool, v == target]
 
 -- | Main entry point.
 main :: IO ()
 main = do
-    args <- getArgs
-    case args of
-        [] -> putStrLn "Usage: countdown <target> <n1> <n2> ... <nk>"
-        (t:ns) ->
-            let target = read t :: Int
-                nums   = map read ns :: [Int]
-            in case findSolution target nums of
-                Just expr -> do
-                    putStrLn $ "Expression: " ++ formatExpr expr
-                    putStrLn $ "Value: " ++ show (eval expr)
-                Nothing ->
-                    putStrLn "No solution could be generated."
+  args <- getArgs
+  case map read args of
+    (target:nums) -> case solve target [(n, Val n) | n <- nums] of
+      Just expr -> putStrLn $ "Expression: " ++ formatExpr expr ++ "\nValue: " ++ show (eval expr)
+      Nothing   -> putStrLn "No solution could be generated."
+    _ -> putStrLn "Usage: countdown <target> <n1> <n2> ..."

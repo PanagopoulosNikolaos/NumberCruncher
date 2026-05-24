@@ -1,88 +1,82 @@
-
-"""Countdown numbers game solver.
-
-Finds an arithmetic expression using given numbers to reach a target value.
-Uses a recursive tree-based search exploring all valid combinations.
-"""
-
 import sys
 from itertools import combinations
 
 
 def solve(pool, target):
-    """Search for an expression evaluating to target.
+    """Solves the Countdown numbers game recursively using a tree search.
 
     Args:
-        pool (list): List of (value, expression_string) tuples.
-        target (int): The target number to reach.
+        pool (list[tuple[int, str]]): A list of tuples containing current numbers and their expression strings.
+        target (int): The target value to reach.
 
     Returns:
-        tuple: (expression_string, value) if found, else None.
+        tuple[str, int] | None: A tuple containing the valid expression string and its evaluated value,
+            or None if no solution is found.
     """
-    # Check if any single number matches the target
     for val, expr in pool:
         if val == target:
+            # Remove only the matching outermost parentheses to keep internal sub-expressions intact.
+            while expr.startswith("(") and expr.endswith(")"):
+                balance = 0
+                is_matching = True
+                for char in expr[:-1]:
+                    if char == "(":
+                        balance += 1
+                    elif char == ")":
+                        balance -= 1
+                    if balance == 0:
+                        is_matching = False
+                        break
+                if is_matching:
+                    expr = expr[1:-1]
+                else:
+                    break
             return expr, val
 
-    # Need at least 2 numbers to combine
     if len(pool) < 2:
         return None
 
-    # Try all pairs with all operations
-    for i, j in combinations(range(len(pool)), 2):
-        v1, e1 = pool[i]
-        v2, e2 = pool[j]
+    for (v1, e1), (v2, e2) in combinations(pool, 2):
+        remaining = list(pool)
+        remaining.remove((v1, e1))
+        remaining.remove((v2, e2))
 
-        # Build remaining pool (excluding the two picked numbers)
-        remaining = [pool[k] for k in range(len(pool)) if k != i and k != j]
-
-        # Define all valid operations
-        candidates = [
+        ops = [
             (v1 + v2, f"({e1} + {e2})"),
             (v1 * v2, f"({e1} * {e2})"),
+            (v1 - v2, f"({e1} - {e2})"),
+            (v2 - v1, f"({e2} - {e1})"),
+            (v1 // v2 if v2 and v1 % v2 == 0 else 0, f"({e1} / {e2})"),
+            (v2 // v1 if v1 and v2 % v1 == 0 else 0, f"({e2} / {e1})"),
         ]
 
-        # Subtraction: only if result is positive
-        if v1 - v2 > 0:
-            candidates.append((v1 - v2, f"({e1} - {e2})"))
-        if v2 - v1 > 0:
-            candidates.append((v2 - v1, f"({e2} - {e1})"))
-
-        # Division: only if exact integer result
-        if v2 != 0 and v1 % v2 == 0:
-            candidates.append((v1 // v2, f"({e1} / {e2})"))
-        if v1 != 0 and v2 % v1 == 0:
-            candidates.append((v2 // v1, f"({e2} / {e1})"))
-
-        for new_val, new_expr in candidates:
-            new_pool = remaining + [(new_val, new_expr)]
-            result = solve(new_pool, target)
-            if result is not None:
-                return result
-
+        for val, expr in ops:
+            if val <= 0:
+                continue
+            res = solve(remaining + [(val, expr)], target)
+            if res:
+                return res
     return None
 
 
 def main():
-    """Parse CLI arguments and run the solver."""
+    """Parses command-line arguments and runs the solver.
+
+    Returns:
+        None: Prints the solver results to standard output.
+    """
     if len(sys.argv) < 3:
-        print("Usage: python countdown.py <target> <n1> <n2> ... <nk>")
-        sys.exit(1)
+        return print("Usage: python countdown.py <target> <n1> <n2> ... <nk>")
 
     target = int(sys.argv[1])
-    numbers = [(int(x), str(x)) for x in sys.argv[2:]]
+    numbers = [(int(x), x) for x in sys.argv[2:]]
+    res = solve(numbers, target)
 
-    result = solve(numbers, target)
-
-    if result is not None:
-        expr, value = result
-        # Strip outermost parentheses for cleaner display
-        if expr.startswith("(") and expr.endswith(")"):
-            expr = expr[1:-1]
-        print(f"Expression: {expr}")
-        print(f"Value: {value}")
-    else:
-        print("No solution could be generated.")
+    print(
+        f"Expression: {res[0]}\nValue: {res[1]}"
+        if res
+        else "No solution could be generated."
+    )
 
 
 if __name__ == "__main__":
