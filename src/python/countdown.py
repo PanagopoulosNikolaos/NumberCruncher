@@ -1,6 +1,25 @@
 import sys
 from itertools import combinations
+import ast
 
+
+def simplify_outer(expr):
+    """Removes the outermost parentheses from an expression if they are matching.
+    
+    Args:
+        expr (str): The expression string.
+        
+    Returns:
+        str: The simplified expression string.
+    """
+    while expr.startswith("(") and expr.endswith(")"):
+        try:
+            # Check if the inner content is a valid standalone expression
+            ast.parse(expr[1:-1])
+            expr = expr[1:-1]
+        except SyntaxError:
+            break
+    return expr
 
 def solve(pool, target):
     """Solves the Countdown numbers game recursively using a tree search.
@@ -15,22 +34,7 @@ def solve(pool, target):
     """
     for val, expr in pool:
         if val == target:
-            # Remove only the matching outermost parentheses to keep internal sub-expressions intact.
-            while expr.startswith("(") and expr.endswith(")"):
-                balance = 0
-                is_matching = True
-                for char in expr[:-1]:
-                    if char == "(":
-                        balance += 1
-                    elif char == ")":
-                        balance -= 1
-                    if balance == 0:
-                        is_matching = False
-                        break
-                if is_matching:
-                    expr = expr[1:-1]
-                else:
-                    break
+            expr = simplify_outer(expr)
             return expr, val
 
     if len(pool) < 2:
