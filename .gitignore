@@ -80,3 +80,4 @@ stack.yaml.lock
 # Ignore local folder "temp"
 temp/
 src/haskell/countdown
+.github/*
