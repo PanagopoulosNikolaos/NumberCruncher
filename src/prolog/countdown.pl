@@ -101,13 +101,24 @@ numbers_to_vals([], []).
 numbers_to_vals([N|Ns], [node(val(N), N)|Vt]) :-
     numbers_to_vals(Ns, Vt).
 
+% Strips the outermost parentheses from the expression string if present.
+strip_outer(ExprStr, Stripped) :-
+    sub_string(ExprStr, 0, 1, _, "("),
+    sub_string(ExprStr, _, 1, 0, ")"),
+    !,
+    string_length(ExprStr, Len),
+    InnerLen is Len - 2,
+    sub_string(ExprStr, 1, InnerLen, _, Stripped).
+strip_outer(ExprStr, ExprStr).
+
 % main(Target, Numbers) solves and prints the result.
 main(Target, Numbers) :-
     numbers_to_vals(Numbers, Pool),
     (   valid_state(Pool, Target, Expr)
     ->  format_expr(Expr, ExprStr),
+        strip_outer(ExprStr, FinalExprStr),  % Removes outermost parentheses for output consistency.
         evaluate(Expr, Value),
-        format('Expression: ~s~n', [ExprStr]),
+        format('Expression: ~s~n', [FinalExprStr]),
         format('Value: ~d~n', [Value])
     ;   format('No solution could be generated.~n', [])
     ).
