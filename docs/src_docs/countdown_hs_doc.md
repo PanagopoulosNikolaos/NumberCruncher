@@ -4,29 +4,28 @@
 
 | Name | Type | Description |
 |------|------|-------------|
-| [Expr](#Expr) | Data Type | Recursive data structure representing an arithmetic expression. |
-| [eval](#eval) | Function | Evaluates an `Expr` tree to its integer result. |
-| [formatExpr](#formatExpr) | Function | Formats an `Expr` tree into a human-readable string. |
-| [candidates](#candidates) | Function | Generates valid results from a pair of arithmetic operands. |
-| [solve](#solve) | Function | Entry point for the recursive solver logic. |
-| [findInPairs](#findInPairs) | Function | Orchestration function for pair selection and recursive calls. |
-| [main](#main) | Function | CLI handler for Haskell binary execution. |
+| [Op](#Op) | Data Type | Represents basic arithmetic operators. |
+| [Expr](#Expr) | Data Type | Models an arithmetic calculation tree. |
+| [eval](#eval) | Function | Evaluates an expression tree to its integer result. |
+| [formatExpr](#formatExpr) | Function | Formats an expression tree as a human-readable string. |
+| [candidates](#candidates) | Function | Generates valid operation results from two (value, expr) pairs. |
+| [select2](#select2) | Function | Selects all pairs of elements from a list, returning them and remaining elements. |
+| [select1](#select1) | Function | Selects one element from a list, returning it and remaining elements. |
+| [solve](#solve) | Function | Recursive solver that tries all pair combinations to reach the target. |
+| [main](#main) | Function | Main entry point. |
 
 ## Overview
 This file implements a purely functional solver for the Countdown numbers game in Haskell. It uses an expression tree representation (`Expr`) and recursive search to explore the solution space, ensuring all arithmetic operations follow game restrictions (positive results, integer-only division).
 
 ## Detailed Breakdown
 
+### Op
+
+**Class Responsibility:** Algebraic data type representing arithmetic addition, subtraction, multiplication, and division operations.
+
 ### Expr
 
-**Class Responsibility:** A recursive algebraic data type that models an arithmetic calculation. It supports integer values and basic binary operators (Add, Sub, Mul, Div), which together construct the tree structure used during search.
-
-### Constructor
-* **Val (Int):** Represents a literal integer value.
-* **Add (Expr, Expr):** Represents an addition operator.
-* **Sub (Expr, Expr):** Represents a subtraction operator.
-* **Mul (Expr, Expr):** Represents a multiplication operator.
-* **Div (Expr, Expr):** Represents a division operator.
+**Class Responsibility:** Algebraic data type modeling an expression tree, consisting of either literal leaf values (`Val Int`) or nested applications of operations (`App Op Expr Expr`).
 
 ---
 
@@ -37,12 +36,12 @@ This file implements a purely functional solver for the Countdown numbers game i
 eval :: Expr -> Int
 ```
 
-**Purpose:** Recursively calculates the integer result of an expression tree.
+**Purpose:** Evaluates an expression tree to its integer result.
 
 **Parameters:**
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| expr | Expr | Yes | — | The tree to evaluate. |
+| expr | Expr | Yes | — | The expression tree to evaluate. |
 
 **Returns:**
 | Type | Description |
@@ -51,16 +50,61 @@ eval :: Expr -> Int
 
 **Source Code:**
 ```haskell
-eval (Val n)    = n
-eval (Add l r)  = eval l + eval r
-eval (Sub l r)  = eval l - eval r
-eval (Mul l r)  = eval l * eval r
-eval (Div l r)  = eval l `div` eval r
+eval (Val n) = n
+eval (App Add l r) = eval l + eval r
+eval (App Sub l r) = eval l - eval r
+eval (App Mul l r) = eval l * eval r
+eval (App Div l r) = eval l `div` eval r
 ```
 
 **Implementation (Executable Logic Only):**
-* **Line 0:** `base case` — Returns the integer value if the node is `Val`.
-* **Line 1:** `recursion` — Recursively evaluates left and right branches and applies the corresponding infix operator.
+* **Line 12:** `eval (Val n) = n` — Returns value of a leaf node.
+* **Line 13:** `eval (App Add l r) = ...` — Recursively evaluates and adds.
+* **Line 14:** `eval (App Sub l r) = ...` — Recursively evaluates and subtracts.
+* **Line 15:** `eval (App Mul l r) = ...` — Recursively evaluates and multiplies.
+* **Line 16:** `eval (App Div l r) = ...` — Recursively evaluates and divides.
+
+**Dependencies:**
+| Symbol | Kind | Purpose | Source |
+|--------|------|---------|--------|
+| div | Built-in | Integer division | Haskell |
+
+---
+
+### formatExpr
+
+**Signature:**
+```haskell
+formatExpr :: Expr -> String
+```
+
+**Purpose:** Formats an expression tree as a readable string with parentheses.
+
+**Parameters:**
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| expr | Expr | Yes | — | The expression tree to format. |
+
+**Returns:**
+| Type | Description |
+|------|-------------|
+| String | The formatted string representation. |
+
+**Source Code:**
+```haskell
+formatExpr (Val n) = show n
+formatExpr (App op l r) = "(" ++ formatExpr l ++ " " ++ sym op ++ " " ++ formatExpr r ++ ")"
+  where sym Add = "+"; sym Sub = "-"; sym Mul = "*"; sym Div = "/"
+```
+
+**Implementation (Executable Logic Only):**
+* **Line 20:** `formatExpr (Val n) = show n` — Show leaf value.
+* **Line 21:** `formatExpr (App op l r) = ...` — Concatenates subexpressions within parentheses.
+
+**Dependencies:**
+| Symbol | Kind | Purpose | Source |
+|--------|------|---------|--------|
+| show | Built-in | String conversion | Haskell |
 
 ---
 
@@ -71,98 +115,151 @@ eval (Div l r)  = eval l `div` eval r
 candidates :: (Int, Expr) -> (Int, Expr) -> [(Int, Expr)]
 ```
 
-**Purpose:** Generates all valid results (value and tree) from two source numbers.
+**Purpose:** Generates all valid operation results from two (value, expr) pairs.
 
 **Parameters:**
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| operand1 | (Int, Expr) | Yes | — | Value and expression tree for the first operand. |
-| operand2 | (Int, Expr) | Yes | — | Value and expression tree for the second operand. |
+| pair1 | (Int, Expr) | Yes | — | First operand pair. |
+| pair2 | (Int, Expr) | Yes | — | Second operand pair. |
 
 **Returns:**
 | Type | Description |
 |------|-------------|
-| [(Int, Expr)] | A list of all valid combinations. |
+| [(Int, Expr)] | List of all mathematically valid candidate results. |
 
 **Source Code:**
 ```haskell
-candidates (v1, e1) (v2, e2) =
-    [ (v1 + v2, Add e1 e2)
-    , (v1 * v2, Mul e1 e2)
-    ]
-    ++ [ (v1 - v2, Sub e1 e2) | v1 > v2 ]
-    ++ [ (v2 - v1, Sub e2 e1) | v2 > v1 ]
-    ++ [ (v1 `div` v2, Div e1 e2) | v2 /= 0, v1 `mod` v2 == 0 ]
-    ++ [ (v2 `div` v1, Div e2 e1) | v1 /= 0, v2 `mod` v1 == 0 ]
+candidates (x, l) (y, r) = 
+  [(x + y, App Add l r), (x * y, App Mul l r)] ++
+  [(x - y, App Sub l r) | x > y] ++
+  [(y - x, App Sub r l) | y > x] ++
+  [(x `div` y, App Div l r) | y /= 0, x `mod` y == 0] ++
+  [(y `div` x, App Div r l) | x /= 0, y `mod` x == 0]
 ```
 
 **Implementation (Executable Logic Only):**
-* **Line 0:** `list comprehension` — Produces results while filtering for positive subtraction results and integer division results using guard conditions.
+* **Line 27:** `Addition & Multiplication` — Unconditionally candidate.
+* **Line 28:** `Subtraction (x - y)` — Guards that result must be positive (`x > y`).
+* **Line 29:** `Subtraction (y - x)` — Guards that result must be positive (`y > x`).
+* **Line 30:** `Division (x / y)` — Guards against division by zero and requires exact division (`mod == 0`).
+* **Line 31:** `Division (y / x)` — Guards against division by zero and requires exact division (`mod == 0`).
+
+**Dependencies:**
+| Symbol | Kind | Purpose | Source |
+|--------|------|---------|--------|
+| div | Built-in | Integer division | Haskell |
+| mod | Built-in | Modulo division | Haskell |
 
 ---
 
-### findInPairs
+### select2
 
-**Primary Library:** Standard Library  
-**Purpose:** Iterates through every possible pair in the pool and recurses down the search tree.
-
-#### Overview
-This function uses list comprehensions to select pairs of elements by their indices. For each pair, it uses the `candidates` function to generate new possible branches and then calls `solve` to see if those branches reach the target. It leverages a helper `firstJust` to stop at the first solution found.
-
-#### Signature
+**Signature:**
 ```haskell
-findInPairs :: Int -> [(Int, Expr)] -> Maybe Expr
+select2 :: [a] -> [(a, a, [a])]
 ```
 
-#### Parameters
+**Purpose:** Selects all pairs of elements from a list, returning them and the remaining elements.
+
+**Parameters:**
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| target | Int | Yes | — | The value to find. |
-| pool | [(Int, Expr)] | Yes | — | The list of current number/expression pairs. |
+| list | [a] | Yes | — | Input list. |
 
-#### Returns
+**Returns:**
 | Type | Description |
 |------|-------------|
-| Maybe Expr | `Just` the result tree if successful, otherwise `Nothing`. |
+| [(a, a, [a])] | List of tuples with two selected items and the remaining list. |
 
-#### Raise
-| Exception | Condition |
-|-----------|-----------|
-| None | Handled via `Maybe` type. |
-
-#### Dependencies
-* **Required Libraries:** `removeAt` (List manipulation)
-* **Internal Modules:** `solve`, `candidates`
-
-#### Workflow (Executable Logic Only)
-
-**Phase 1: Index-based Pair Selection**
-* **Operation 1:** Select `i` from `[0 .. length pool - 1]`.
-* **Operation 2:** Select `j` from `[i + 1 .. length pool - 1]` to avoid reversing pairs.
-* **Operation 3:** Remove elements at `i` and `j` to form the `rest` list.
-
-**Phase 2: Combination Generation**
-* **Operation 1:** Call `candidates (v1, e1) (v2, e2)` for the selected pair.
-
-**Phase 3: Deep Recursion**
-* **Operation 1:** For each candidate `(v, e)`, call `solve target ((v, e) : rest)`.
-* **Operation 2:** Use `firstJust` to traverse the list of results and return the first non-`Nothing` value.
-
-#### Source Code
+**Source Code:**
 ```haskell
-findInPairs target pool = firstJust $ do
-    i <- [0 .. length pool - 1]
-    j <- [i + 1 .. length pool - 1]
-    let (v1, e1) = pool !! i
-        (v2, e2) = pool !! j
-        rest = removeAt (removeAt pool i) $ if j > i then j - 1 else j
-    (v, e) <- candidates (v1, e1) (v2, e2)
-    return $ solve target ((v, e) : rest)
-  where
-    firstJust [] = Nothing
-    firstJust (Nothing:xs) = firstJust xs
-    firstJust (Just x:_) = Just x
+select2 [] = []
+select2 (x:xs) = [(x, y, ys) | (y, ys) <- select1 xs] ++ [(y, z, x:ys) | (y, z, ys) <- select2 xs]
 ```
+
+**Implementation (Executable Logic Only):**
+* **Line 35:** `Base case` — Returns empty list for empty input.
+* **Line 36:** `Recursive selection` — Selects `x` and pairs it with all selections from `xs` using `select1`, then recurses on `xs`.
+
+**Dependencies:**
+| Symbol | Kind | Purpose | Source |
+|--------|------|---------|--------|
+| select1 | Internal | Helper list selection | countdown.hs |
+
+---
+
+### select1
+
+**Signature:**
+```haskell
+select1 :: [a] -> [(a, [a])]
+```
+
+**Purpose:** Selects one element from a list, returning it and the remaining elements.
+
+**Parameters:**
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| list | [a] | Yes | — | Input list. |
+
+**Returns:**
+| Type | Description |
+|------|-------------|
+| [(a, [a])] | List of tuples with one selected item and the rest of the list. |
+
+**Source Code:**
+```haskell
+select1 [] = []
+select1 (x:xs) = (x, xs) : [(y, x:ys) | (y, ys) <- select1 xs]
+```
+
+**Implementation (Executable Logic Only):**
+* **Line 40:** `Base case` — Returns empty list for empty input.
+* **Line 41:** `Recursive selection` — Pair `x` with `xs`, then recursively prepend `x` to remaining lists of subsequent elements.
+
+---
+
+### solve
+
+**Signature:**
+```haskell
+solve :: Int -> [(Int, Expr)] -> Maybe Expr
+```
+
+**Purpose:** Recursive solver that tries all pair combinations to reach the target.
+
+**Parameters:**
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| target | Int | Yes | — | Target value. |
+| pool | [(Int, Expr)] | Yes | — | Current pool of active expressions. |
+
+**Returns:**
+| Type | Description |
+|------|-------------|
+| Maybe Expr | `Just` the valid expression if found; otherwise, `Nothing`. |
+
+**Source Code:**
+```haskell
+solve target pool 
+  | not (null hits) = Just (head hits)
+  | otherwise = listToMaybe $ mapMaybe (solve target) 
+      [ (v, e) : rest | (a, b, rest) <- select2 pool, (v, e) <- candidates a b ]
+  where hits = [e | (v, e) <- pool, v == target]
+```
+
+**Implementation (Executable Logic Only):**
+* **Line 46:** `hits check` — Returns first hit if target is directly present in the pool.
+* **Line 47:** `otherwise recursion` — Non-deterministically combines pairs using `select2` and `candidates`, then maps `solve` over resulting states, picking the first success via `listToMaybe`.
+
+**Dependencies:**
+| Symbol | Kind | Purpose | Source |
+|--------|------|---------|--------|
+| listToMaybe | External | Gets first element of list as Maybe | Data.Maybe |
+| mapMaybe | External | Maps a function returning Maybe over list | Data.Maybe |
+| select2 | Internal | Select pairs from list | countdown.hs |
+| candidates | Internal | Calculate pairs combinations | countdown.hs |
 
 ---
 
@@ -173,44 +270,41 @@ findInPairs target pool = firstJust $ do
 main :: IO ()
 ```
 
-**Purpose:** CLI handler for Haskell binary execution.
+**Purpose:** Main entry point.
 
 **Parameters:**
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| None | — | — | — | Reads directly from `System.Environment.getArgs`. |
+| None | — | — | — | Reads program arguments. |
 
 **Returns:**
 | Type | Description |
 |------|-------------|
-| IO () | Outputs results directly to standard output. |
+| IO () | Outputs solved expression or failure. |
 
 **Source Code:**
 ```haskell
-main :: IO ()
 main = do
-    args <- getArgs
-    case args of
-        [] -> putStrLn "Usage: countdown <target> <n1> <n2> ... <nk>"
-        (t:ns) ->
-            let target = read t :: Int
-                nums   = map read ns :: [Int]
-            in case findSolution target nums of
-                Just expr -> do
-                    putStrLn $ "Expression: " ++ formatExpr expr
-                    putStrLn $ "Value: " ++ show (eval expr)
-                Nothing ->
-                    putStrLn "No solution could be generated."
+  args <- getArgs
+  case map read args of
+    (target:nums) -> case solve target [(n, Val n) | n <- nums] of
+      Just expr -> putStrLn $ "Expression: " ++ formatExpr expr ++ "\nValue: " ++ show (eval expr)
+      Nothing   -> putStrLn "No solution could be generated."
+    _ -> putStrLn "Usage: countdown <target> <n1> <n2> ..."
 ```
 
 **Implementation (Executable Logic Only):**
-* **Line 0:** `getArgs` — Fetches command-line arguments.
-* **Line 1:** `parsing` — Reads the target and numbers list.
-* **Line 2:** `findSolution call` — Initiates the search logic.
-* **Line 3:** `output` — Prints the formatted expression or failure message.
+* **Line 54:** `args <- getArgs` — Reads program arguments.
+* **Line 55:** `map read args` — Parses target and input numbers list.
+* **Line 56:** `solve target ...` — Invokes recursive search.
+* **Line 57:** `putStrLn` — Outputs formatted expression and verified value.
 
 **Dependencies:**
 | Symbol | Kind | Purpose | Source |
 |--------|------|---------|--------|
-| getArgs | External | CLI Argument access | System.Environment |
-| findSolution | Internal | Solver logic | countdown.hs |
+| getArgs | External | Get CLI arguments | System.Environment |
+| putStrLn | Built-in | Print line to stdout | Haskell |
+| show | Built-in | Format value to string | Haskell |
+| solve | Internal | Recursive solver | countdown.hs |
+| formatExpr | Internal | Expression formatter | countdown.hs |
+| eval | Internal | Expression evaluator | countdown.hs |

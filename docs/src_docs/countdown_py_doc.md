@@ -4,13 +4,62 @@
 
 | Name | Type | Description |
 |------|------|-------------|
+| [simplify_outer](#simplify_outer) | Function | Removes matching outermost parentheses from an expression. |
 | [solve](#solve) | Function | Recursively searches for an arithmetic expression evaluating to the target. |
-| [main](#main) | Function | Orchestrates CLI argument parsing and solver execution. |
+| [main](#main) | Function | Parses command-line arguments and runs the solver. |
 
 ## Overview
-This file implements a recursive, tree-based solver for the Countdown numbers game. It explores all valid arithmetic combinations of a pool of integers to find an expression that evaluates to a specific target value, adhering to game rules such as positive results for subtraction and integer results for division.
+This file implements a recursive tree-search solver for the Countdown numbers game. It explores all valid arithmetic combinations of a pool of integers to find an expression that evaluates to a specific target value, adhering to game rules such as positive results for subtraction and integer results for division.
 
 ## Detailed Breakdown
+
+### simplify_outer
+
+**Signature:**
+```python
+def simplify_outer(expr: str) -> str
+```
+
+**Purpose:** Removes the outermost parentheses from an expression if they are matching.
+
+**Parameters:**
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| expr | str | Yes | — | The expression string to simplify. |
+
+**Returns:**
+| Type | Description |
+|------|-------------|
+| str | The simplified expression string. |
+
+**Source Code:**
+```python
+def simplify_outer(expr):
+    while expr.startswith("(") and expr.endswith(")"):
+        try:
+            # Check if the inner content is a valid standalone expression
+            ast.parse(expr[1:-1])
+            expr = expr[1:-1]
+        except SyntaxError:
+            break
+    return expr
+```
+
+**Implementation (Executable Logic Only):**
+* **Line 15:** `while expr.startswith("(") and expr.endswith(")"):` — Checks for outer parentheses.
+* **Line 16:** `try:` — Catches potential parsing errors.
+* **Line 18:** `ast.parse(expr[1:-1])` — Verifies inner content is syntactically correct.
+* **Line 19:** `expr = expr[1:-1]` — Strips outer parentheses if valid.
+* **Line 20:** `except SyntaxError:` — Handles syntactic invalidity of inner content.
+* **Line 21:** `break` — Exits loop if outer parentheses are not matching.
+* **Line 22:** `return expr` — Returns the simplified expression.
+
+**Dependencies:**
+| Symbol | Kind | Purpose | Source |
+|--------|------|---------|--------|
+| ast.parse | External | Parsing Python expression syntax | ast |
+
+---
 
 ### solve
 
@@ -22,7 +71,7 @@ The function employs a depth-first search strategy. It first checks if the targe
 
 #### Signature
 ```python
-def solve(pool: list, target: int) -> tuple
+def solve(pool: list, target: int) -> tuple | None
 ```
 
 #### Parameters
@@ -34,43 +83,62 @@ def solve(pool: list, target: int) -> tuple
 #### Returns
 | Type | Description |
 |------|-------------|
-| tuple | A tuple containing (expression_string, value) if a solution is found; otherwise, `None`. |
+| tuple \| None | A tuple containing (expression_string, value) if a solution is found; otherwise, `None`. |
 
-#### Raise
+#### Raises
 | Exception | Condition |
 |-----------|-----------|
 | None | Handled via return values. |
 
 #### Dependencies
 * **Required Libraries:** `itertools.combinations` (Generating unique pairs from the number pool)
-* **Internal Modules:** `solve` (Recursive calls)
+* **Internal Modules:** `solve` (Recursive calls), `simplify_outer` (Strips outermost parentheses)
 
 #### Workflow (Executable Logic Only)
 
 **Phase 1: Base Case & Validation**
 Checks if the target is already achieved or if the pool is exhausted.
 * **Operation 1:** Iterate through `pool` to find any `val == target`.
-* **Operation 2:** Verify `len(pool) >= 2` to ensure further operations are possible.
+* **Operation 2:** Call `simplify_outer` to clean up the winning expression and return it.
+* **Operation 3:** Verify `len(pool) < 2` to return `None` if no further operations are possible.
 
 *Code Context:*
 ```python
     for val, expr in pool:
         if val == target:
+            expr = simplify_outer(expr)
             return expr, val
+
     if len(pool) < 2:
         return None
 ```
 
 **Phase 2: Pair Selection & Combination**
 Generates all possible arithmetic results from every pair in the pool.
-* **Operation 1:** Select indices `i, j` using `combinations`.
-* **Operation 2:** Calculate `v1 + v2` and `v1 * v2`.
-* **Operation 3:** Calculate `v1 - v2` or `v2 - v1` if results are positive.
-* **Operation 4:** Calculate `v1 // v2` or `v2 // v1` if division is exact.
+* **Operation 1:** Select elements `v1, e1` and `v2, e2` using `combinations`.
+* **Operation 2:** Create a `remaining` list excluding the selected pair.
+* **Operation 3:** Generate potential candidate results for `+`, `*`, `-`, and `/` under constraints.
+
+*Code Context:*
+```python
+    for (v1, e1), (v2, e2) in combinations(pool, 2):
+        remaining = list(pool)
+        remaining.remove((v1, e1))
+        remaining.remove((v2, e2))
+
+        ops = [
+            (v1 + v2, f"({e1} + {e2})"),
+            (v1 * v2, f"({e1} * {e2})"),
+            (v1 - v2, f"({e1} - {e2})"),
+            (v2 - v1, f"({e2} - {e1})"),
+            (v1 // v2 if v2 and v1 % v2 == 0 else 0, f"({e1} / {e2})"),
+            (v2 // v1 if v1 and v2 % v1 == 0 else 0, f"({e2} / {e1})"),
+        ]
+```
 
 **Phase 3: Recursive Search**
 Recurses with the new number pool.
-* **Operation 1:** For each candidate result, create a `new_pool` and call `solve`.
+* **Operation 1:** For each candidate result, if strictly positive, recurse with the combined result added to `remaining`.
 * **Operation 2:** Return the first valid result found.
 
 #### Source Code
@@ -78,37 +146,39 @@ Recurses with the new number pool.
 def solve(pool, target):
     for val, expr in pool:
         if val == target:
+            expr = simplify_outer(expr)
             return expr, val
+
     if len(pool) < 2:
         return None
-    for i, j in combinations(range(len(pool)), 2):
-        v1, e1 = pool[i]
-        v2, e2 = pool[j]
-        remaining = [pool[k] for k in range(len(pool)) if k != i and k != j]
-        candidates = [
+
+    for (v1, e1), (v2, e2) in combinations(pool, 2):
+        remaining = list(pool)
+        remaining.remove((v1, e1))
+        remaining.remove((v2, e2))
+
+        ops = [
             (v1 + v2, f"({e1} + {e2})"),
             (v1 * v2, f"({e1} * {e2})"),
+            (v1 - v2, f"({e1} - {e2})"),
+            (v2 - v1, f"({e2} - {e1})"),
+            (v1 // v2 if v2 and v1 % v2 == 0 else 0, f"({e1} / {e2})"),
+            (v2 // v1 if v1 and v2 % v1 == 0 else 0, f"({e2} / {e1})"),
         ]
-        if v1 - v2 > 0:
-            candidates.append((v1 - v2, f"({e1} - {e2})"))
-        if v2 - v1 > 0:
-            candidates.append((v2 - v1, f"({e2} - {e1})"))
-        if v2 != 0 and v1 % v2 == 0:
-            candidates.append((v1 // v2, f"({e1} / {e2})"))
-        if v1 != 0 and v2 % v1 == 0:
-            candidates.append((v2 // v1, f"({e2} / {e1})"))
-        for new_val, new_expr in candidates:
-            new_pool = remaining + [(new_val, new_expr)]
-            result = solve(new_pool, target)
-            if result is not None:
-                return result
+
+        for val, expr in ops:
+            if val <= 0:
+                continue
+            res = solve(remaining + [(val, expr)], target)
+            if res:
+                return res
     return None
 ```
 
 #### Usage Example
 ```python
 result = solve([(1, "1"), (2, "2"), (4, "4")], 7)
-# Returns ("(1 + (2 * 4))", 7) or similar
+# Returns ("1 + (2 * 4)", 7) or similar
 ```
 
 ---
@@ -120,7 +190,7 @@ result = solve([(1, "1"), (2, "2"), (4, "4")], 7)
 def main() -> None
 ```
 
-**Purpose:** Parses command-line arguments and initiates the solver.
+**Purpose:** Parses command-line arguments and runs the solver.
 
 **Parameters:**
 | Parameter | Type | Required | Default | Description |
@@ -130,37 +200,36 @@ def main() -> None
 **Returns:**
 | Type | Description |
 |------|-------------|
-| None | Outputs results directly to standard output. |
+| None | Prints the solver results to standard output. |
 
 **Source Code:**
 ```python
 def main():
     if len(sys.argv) < 3:
-        print("Usage: python countdown.py <target> <n1> <n2> ... <nk>")
-        sys.exit(1)
+        return print("Usage: python countdown.py <target> <n1> <n2> ... <nk>")
+
     target = int(sys.argv[1])
-    numbers = [(int(x), str(x)) for x in sys.argv[2:]]
-    result = solve(numbers, target)
-    if result is not None:
-        expr, value = result
-        if expr.startswith("(") and expr.endswith(")"):
-            expr = expr[1:-1]
-        print(f"Expression: {expr}")
-        print(f"Value: {value}")
-    else:
-        print("No solution could be generated.")
+    numbers = [(int(x), x) for x in sys.argv[2:]]
+    res = solve(numbers, target)
+
+    print(
+        f"Expression: {res[0]}\nValue: {res[1]}"
+        if res
+        else "No solution could be generated."
+    )
 ```
 
 **Implementation (Executable Logic Only):**
-* **Line 0:** `sys.argv check` — Validates that a target and at least one number are provided.
-* **Line 1:** `target/numbers parsing` — Converts string arguments into a usable pool of tuples.
-* **Line 2:** `solve() call` — Initiates the recursive search.
-* **Line 3:** `result formatting` — Cleans up the expression string (stripping outer parentheses) and prints the outcome.
+* **Line 72:** `if len(sys.argv) < 3:` — Validates arguments.
+* **Line 73:** `return print(...)` — Prints usage help.
+* **Line 75:** `target = int(sys.argv[1])` — Parses target value.
+* **Line 76:** `numbers = [(int(x), x) for ...]` — Builds initial pool.
+* **Line 77:** `res = solve(numbers, target)` — Executes search.
+* **Line 79:** `print(...)` — Outputs result.
 
 **Dependencies:**
 | Symbol | Kind | Purpose | Source |
 |--------|------|---------|--------|
 | sys.argv | External | CLI Argument access | sys |
-| sys.exit | External | Error termination | sys |
 | int | Built-in | String to Integer conversion | Python |
 | solve | Internal | Solver logic | countdown.py |
