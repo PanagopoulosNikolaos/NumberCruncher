@@ -35,29 +35,20 @@ if [ ! -f "$HS_BIN" ] || [ "$SOLVER_ROOT/haskell/countdown.hs" -nt "$HS_BIN" ]; 
     ghc -o "$HS_BIN" -odir "$CACHE_DIR" -hidir "$CACHE_DIR" "$SOLVER_ROOT/haskell/countdown.hs" -O2 2>/dev/null
 fi
 
-# Launch all three solvers concurrently, timing each one using high-precision EPOCHREALTIME.
+# Launch all three solvers concurrently, timing each one using bash's built-in time command.
 (
-    START=$EPOCHREALTIME
-    python3 "$SOLVER_ROOT/python/countdown.py" "$TARGET" $NUMBERS > "$TEMP_DIR/python_output.txt" 2>&1
-    END=$EPOCHREALTIME
-    ELAPSED=$(echo "scale=3; $END - $START" | bc)
-    echo "$ELAPSED" > "$TEMP_DIR/python_time.txt"
+    TIMEFORMAT="%R"
+    { time python3 "$SOLVER_ROOT/python/countdown.py" "$TARGET" $NUMBERS > "$TEMP_DIR/python_output.txt" 2>&1 ; } 2> "$TEMP_DIR/python_time.txt"
 ) &
 
 (
-    START=$EPOCHREALTIME
-    "$HS_BIN" "$TARGET" $NUMBERS > "$TEMP_DIR/haskell_output.txt" 2>&1
-    END=$EPOCHREALTIME
-    ELAPSED=$(echo "scale=3; $END - $START" | bc)
-    echo "$ELAPSED" > "$TEMP_DIR/haskell_time.txt"
+    TIMEFORMAT="%R"
+    { time "$HS_BIN" "$TARGET" $NUMBERS > "$TEMP_DIR/haskell_output.txt" 2>&1 ; } 2> "$TEMP_DIR/haskell_time.txt"
 ) &
 
 (
-    START=$EPOCHREALTIME
-    swipl -s "$SOLVER_ROOT/prolog/countdown.pl" -g "main($TARGET, $PROLOG_LIST), halt." > "$TEMP_DIR/prolog_output.txt" 2>&1
-    END=$EPOCHREALTIME
-    ELAPSED=$(echo "scale=3; $END - $START" | bc)
-    echo "$ELAPSED" > "$TEMP_DIR/prolog_time.txt"
+    TIMEFORMAT="%R"
+    { time swipl -s "$SOLVER_ROOT/prolog/countdown.pl" -g "main($TARGET, $PROLOG_LIST), halt." > "$TEMP_DIR/prolog_output.txt" 2>&1 ; } 2> "$TEMP_DIR/prolog_time.txt"
 ) &
 
 # Wait for all solvers to finish

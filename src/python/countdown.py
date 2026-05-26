@@ -3,7 +3,7 @@ from itertools import combinations
 import ast
 
 
-def simplify_outer(expr):
+def simplifyOuter(expr):
     """Removes the outermost parentheses from an expression if they are matching.
     
     Args:
@@ -21,20 +21,30 @@ def simplify_outer(expr):
             break
     return expr
 
-def solve(pool, target):
+
+def solve(pool, target, seen=None):
     """Solves the Countdown numbers game recursively using a tree search.
 
     Args:
         pool (list[tuple[int, str]]): A list of tuples containing current numbers and their expression strings.
         target (int): The target value to reach.
+        seen (set[tuple[int, ...]] | None): A set of already explored states to prune redundant search paths.
 
     Returns:
         tuple[str, int] | None: A tuple containing the valid expression string and its evaluated value,
             or None if no solution is found.
     """
+    if seen is None:
+        seen = set()
+
+    state = tuple(sorted(val for val, _ in pool))
+    if state in seen:
+        return None
+    seen.add(state)
+
     for val, expr in pool:
         if val == target:
-            expr = simplify_outer(expr)
+            expr = simplifyOuter(expr)
             return expr, val
 
     if len(pool) < 2:
@@ -57,7 +67,7 @@ def solve(pool, target):
         for val, expr in ops:
             if val <= 0:
                 continue
-            res = solve(remaining + [(val, expr)], target)
+            res = solve(remaining + [(val, expr)], target, seen)
             if res:
                 return res
     return None

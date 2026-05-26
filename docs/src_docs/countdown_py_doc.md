@@ -4,7 +4,7 @@
 
 | Name | Type | Description |
 |------|------|-------------|
-| [simplify_outer](#simplify_outer) | Function | Removes matching outermost parentheses from an expression. |
+| [simplifyOuter](#simplifyOuter) | Function | Removes matching outermost parentheses from an expression. |
 | [solve](#solve) | Function | Recursively searches for an arithmetic expression evaluating to the target. |
 | [main](#main) | Function | Parses command-line arguments and runs the solver. |
 
@@ -13,11 +13,11 @@ This file implements a recursive tree-search solver for the Countdown numbers ga
 
 ## Detailed Breakdown
 
-### simplify_outer
+### simplifyOuter
 
 **Signature:**
 ```python
-def simplify_outer(expr: str) -> str
+def simplifyOuter(expr: str) -> str
 ```
 
 **Purpose:** Removes the outermost parentheses from an expression if they are matching.
@@ -34,7 +34,7 @@ def simplify_outer(expr: str) -> str
 
 **Source Code:**
 ```python
-def simplify_outer(expr):
+def simplifyOuter(expr):
     while expr.startswith("(") and expr.endswith(")"):
         try:
             # Check if the inner content is a valid standalone expression
@@ -71,7 +71,7 @@ The function employs a depth-first search strategy. It first checks if the targe
 
 #### Signature
 ```python
-def solve(pool: list, target: int) -> tuple | None
+def solve(pool: list, target: int, seen: set = None) -> tuple | None
 ```
 
 #### Parameters
@@ -79,6 +79,7 @@ def solve(pool: list, target: int) -> tuple | None
 |-----------|------|----------|---------|-------------|
 | pool | list | Yes | — | List of (value, expression_string) tuples representing current available numbers. |
 | target | int | Yes | — | The integer target value to be achieved. |
+| seen | set | No | None | A set of already explored states to prune redundant search paths. |
 
 #### Returns
 | Type | Description |
@@ -92,14 +93,14 @@ def solve(pool: list, target: int) -> tuple | None
 
 #### Dependencies
 * **Required Libraries:** `itertools.combinations` (Generating unique pairs from the number pool)
-* **Internal Modules:** `solve` (Recursive calls), `simplify_outer` (Strips outermost parentheses)
+* **Internal Modules:** `solve` (Recursive calls), `simplifyOuter` (Strips outermost parentheses)
 
 #### Workflow (Executable Logic Only)
 
 **Phase 1: Base Case & Validation**
 Checks if the target is already achieved or if the pool is exhausted.
 * **Operation 1:** Iterate through `pool` to find any `val == target`.
-* **Operation 2:** Call `simplify_outer` to clean up the winning expression and return it.
+* **Operation 2:** Call `simplifyOuter` to clean up the winning expression and return it.
 * **Operation 3:** Verify `len(pool) < 2` to return `None` if no further operations are possible.
 
 *Code Context:*
@@ -143,10 +144,18 @@ Recurses with the new number pool.
 
 #### Source Code
 ```python
-def solve(pool, target):
+def solve(pool, target, seen=None):
+    if seen is None:
+        seen = set()
+
+    state = tuple(sorted(val for val, _ in pool))
+    if state in seen:
+        return None
+    seen.add(state)
+
     for val, expr in pool:
         if val == target:
-            expr = simplify_outer(expr)
+            expr = simplifyOuter(expr)
             return expr, val
 
     if len(pool) < 2:
@@ -169,7 +178,7 @@ def solve(pool, target):
         for val, expr in ops:
             if val <= 0:
                 continue
-            res = solve(remaining + [(val, expr)], target)
+            res = solve(remaining + [(val, expr)], target, seen)
             if res:
                 return res
     return None
