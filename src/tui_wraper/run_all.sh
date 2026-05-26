@@ -7,7 +7,9 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# Resolve the solver source directory relative to the script location.
+SOLVER_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 TEMP_DIR="/tmp/countdown_results"
 
 rm -rf "$TEMP_DIR"
@@ -25,34 +27,36 @@ NUMBERS="$*"
 # Build the Prolog argument string
 PROLOG_LIST="[$(echo "$NUMBERS" | sed 's/ /,/g')]"
 
-# Launch all three solvers concurrently, timing each one
+# Compiles Haskell if needed in a user-writable cache directory to avoid permission issues.
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/numbercruncher"
+mkdir -p "$CACHE_DIR"
+HS_BIN="$CACHE_DIR/countdown"
+if [ ! -f "$HS_BIN" ] || [ "$SOLVER_ROOT/haskell/countdown.hs" -nt "$HS_BIN" ]; then
+    ghc -o "$HS_BIN" -odir "$CACHE_DIR" -hidir "$CACHE_DIR" "$SOLVER_ROOT/haskell/countdown.hs" -O2 2>/dev/null
+fi
+
+# Launch all three solvers concurrently, timing each one using high-precision EPOCHREALTIME.
 (
-    START=$(date +%s%N)
-    python3 "$PROJECT_ROOT/src/python/countdown.py" "$TARGET" $NUMBERS > "$TEMP_DIR/python_output.txt" 2>&1
-    END=$(date +%s%N)
-    ELAPSED=$(echo "scale=3; ($END - $START) / 1000000000" | bc)
+    START=$EPOCHREALTIME
+    python3 "$SOLVER_ROOT/python/countdown.py" "$TARGET" $NUMBERS > "$TEMP_DIR/python_output.txt" 2>&1
+    END=$EPOCHREALTIME
+    ELAPSED=$(echo "scale=3; $END - $START" | bc)
     echo "$ELAPSED" > "$TEMP_DIR/python_time.txt"
 ) &
 
-# Compiles Haskell if needed
-HS_BIN="$PROJECT_ROOT/src/haskell/countdown"
-if [ ! -f "$HS_BIN" ] || [ "$PROJECT_ROOT/src/haskell/countdown.hs" -nt "$HS_BIN" ]; then
-    ghc -o "$HS_BIN" "$PROJECT_ROOT/src/haskell/countdown.hs" -O2 2>/dev/null
-fi
-
 (
-    START=$(date +%s%N)
+    START=$EPOCHREALTIME
     "$HS_BIN" "$TARGET" $NUMBERS > "$TEMP_DIR/haskell_output.txt" 2>&1
-    END=$(date +%s%N)
-    ELAPSED=$(echo "scale=3; ($END - $START) / 1000000000" | bc)
+    END=$EPOCHREALTIME
+    ELAPSED=$(echo "scale=3; $END - $START" | bc)
     echo "$ELAPSED" > "$TEMP_DIR/haskell_time.txt"
 ) &
 
 (
-    START=$(date +%s%N)
-    swipl -s "$PROJECT_ROOT/src/prolog/countdown.pl" -g "main($TARGET, $PROLOG_LIST), halt." > "$TEMP_DIR/prolog_output.txt" 2>&1
-    END=$(date +%s%N)
-    ELAPSED=$(echo "scale=3; ($END - $START) / 1000000000" | bc)
+    START=$EPOCHREALTIME
+    swipl -s "$SOLVER_ROOT/prolog/countdown.pl" -g "main($TARGET, $PROLOG_LIST), halt." > "$TEMP_DIR/prolog_output.txt" 2>&1
+    END=$EPOCHREALTIME
+    ELAPSED=$(echo "scale=3; $END - $START" | bc)
     echo "$ELAPSED" > "$TEMP_DIR/prolog_time.txt"
 ) &
 

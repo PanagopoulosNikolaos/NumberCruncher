@@ -29,3 +29,6 @@ Repository = "https://github.com/PanagopoulosNikolaos/NumberCruncher.git"
 [tool.setuptools.packages.find]
 where = ["src"]
 namespaces = false
+
+[tool.setuptools.package-data]
+"*" = ["*.sh", "*.hs", "*.pl", "Makefile"]
