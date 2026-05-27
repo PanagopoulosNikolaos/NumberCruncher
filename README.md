@@ -37,6 +37,7 @@ pip install -e .
 crunch
 ```
 This will launch a menu to select difficulty levels or enter custom target numbers and values.
+
 ---
 ![TUI main](images/TUI_Selection_Page.png)
 
