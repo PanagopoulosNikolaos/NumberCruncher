@@ -33,7 +33,7 @@ python3 src/tui_wraper/tui.py
 
 ### Quick Execution (Installable Command)
 ```bash
-pip install -e .
+pipx install -e .
 crunch
 ```
 This will launch a menu to select difficulty levels or enter custom target numbers and values.
