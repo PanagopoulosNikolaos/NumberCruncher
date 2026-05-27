@@ -22,7 +22,7 @@ pip install -r requirements.txt
 ```
 #### If on Debian based systems 
 ```bash
-sudo apt install python3-rich # much simpler
+sudo apt install python3-rich 
 ```
 
 ## Running the Project
